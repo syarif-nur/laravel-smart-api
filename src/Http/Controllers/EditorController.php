@@ -83,10 +83,9 @@ class EditorController extends Controller
         try {
             if($request->has('host') ){
                 // driver,host,port,username,password,database
+                $connection = $request->all();
                 if($request->driver=="pgsql" && !isset($request->database) ){                
                     $connection->database = "postgres";
-                }else{
-                    $connection = $request->all();
                 }
                 $conn = $this->getConnection($connection);
                 $dbname = $conn->getDatabaseName();
@@ -694,6 +693,7 @@ class EditorController extends Controller
                 "fullColumns" =>$table->fullColumns,
                 "columns" => $table->columns,
                 "is_view"=>$table->is_view,
+                "fks" => $table->foreign_keys,
                 "config" =>[
                     'guarded'   => isset($cfg['guarded'])?$cfg['guarded']:['id'], 
                     'hidden'    => isset($cfg['hidden'])?$cfg['hidden']:[], 
