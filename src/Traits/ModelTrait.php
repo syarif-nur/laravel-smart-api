@@ -115,6 +115,19 @@ trait ModelTrait {
         $query->orWhereRaw( str_replace("this.","$table.", $columnIn)." IN (".implode(',',$idsIn).")" );
     }
 
+        private function getDataType($col){
+            $columns = $this->columnsFull;
+            foreach($columns as $column){
+                $column = explode(":", $column);
+                if($column[0]==$col){
+                    return $column[1];
+                    break;
+                }
+            }
+            return null;
+        }
+        
+
     /**
      *  @param object
      */
@@ -142,12 +155,12 @@ trait ModelTrait {
                 }
 
                 if( !Str::contains($column, '.') ){
-                    $dataType = getDataType($model, $column);
+                    $dataType = $this->getDataType($column);
                     $column = in_array($column, $model->columns)?"this.$column":$column;
                 }else{
                     $colArr = explode(".", $column);
                     if($model=Api::getBasic( $colArr[0])){
-                        $dataType = getDataType( $model, $colArr[1] );
+                        $dataType = $this->getDataType( $colArr[1] );
                     }else{
                         $dataType = 'text';
                     }
