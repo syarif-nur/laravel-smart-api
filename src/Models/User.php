@@ -3,7 +3,7 @@
 namespace Starlight93\LaravelSmartApi\Models;
 
 use Tymon\JWTAuth\Contracts\JWTSubject;
-use App\Models\User as DefaultUser;
+use App\Models\User\User as DefaultUser;
 
 class User extends DefaultUser implements JWTSubject
 {
