@@ -17,7 +17,7 @@ Route::get('/{modelname}/{function}', function(Request $req,$modelname,$function
     }
     $result = $model->$function($req);
     return $result;
-});
+})->middleware('web');
 
 Route::post('/{modelname}/{function}', function(Request $req,$modelname,$function){
     $modelCandidate = "\App\Models\CustomModels\\$modelname";
@@ -35,4 +35,4 @@ Route::post('/{modelname}/{function}', function(Request $req,$modelname,$functio
     }
     $result = $model->$function($req);
     return $result;
-});
+})->middleware('web');
