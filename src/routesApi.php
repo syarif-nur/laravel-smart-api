@@ -9,7 +9,7 @@ use Carbon\Carbon;
 Route::post('/login', "UserController@login");
 
 Route::group([
-        'middleware' => [\Starlight93\LaravelSmartApi\Http\Middleware\SocialiteMiddleware::class],
+        'middleware' => ['auth-api'],
     ], function () {
         Route::get('/logout', "UserController@logout");
         Route::get('/user', "UserController@user");
