@@ -219,7 +219,6 @@ trait ModelTrait {
                     }
                 }
 
-                $val = strtolower($val);
                 $val = str_replace( [ '\\','(',')', "'" ],[ "\'",'\\\\','\(','\)' ], $val);
                 if(in_array( Str::lower($fixedOperator), ['between','in', 'not in']) ){
                     $valArr = Str::contains($val, ',') ? explode(",", $val) : explode("~", $val);
