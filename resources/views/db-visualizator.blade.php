@@ -182,6 +182,11 @@ function createTable(data, isReferenced=false, caller=null){
         longText=columnText.width();
     }
     data['columns'] = data.fullColumns;
+    const physicalFK = {};
+    data.fks?.forEach((colfk) => {
+      physicalFK[colfk.child_column] = colfk;
+    })
+
     for(let i=1; i<data.columns.length;i++){
         let comment={};let required=true;
         if(data.columns[i].comment){
@@ -199,6 +204,13 @@ function createTable(data, isReferenced=false, caller=null){
           data.columns[i].column_reference =  fkArray.length==2? fkArray[1]:fkArray[2];
           data.columns[i].connection = 'FK';
         }
+
+        if(physicalFK[data.columns[i].name]){
+          data.columns[i].table_reference =  physicalFK[data.columns[i].name].parent;
+          data.columns[i].column_reference =  physicalFK[data.columns[i].name].parent_column;
+          data.columns[i].connection = 'FK!';
+        }
+
         if( data.columns[i].nullable===false ) {required=false;}
         if(comment['required']!==undefined && comment['required']=="false"){
           required=false;

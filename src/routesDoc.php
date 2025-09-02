@@ -11,20 +11,33 @@ Route::get('/', function(){
         "PHP Version" => "PHP: ".phpversion().", OS: ".PHP_OS_FAMILY.", User: ".get_current_user(),
         "Database" => DB::connection()->getDatabaseName()." (".DB::connection()->getDriverName().")",
         "Debugging" => env("APP_DEBUG"),
-        "DB Schema" => url("/docs/schema"),
         "Scheduler" => url("/docs/scheduler"),
         "List Menu" => url("/docs/menu"),
         "Activities" => url("/docs/activities"),
         "Logs" => url("/docs/logs"),
         "Data Uploader" => url("/docs/uploader"),
-        "API Doc" => url("/docs/api"),
+        // "DB Schema" => url("/docs/schema"),
+        // "API Doc" => url("/docs/api"),
         "API Request" => url("/docs/api-request")
     ]);
 });
 
 Route::get('/schema', 'EditorController@getGeneratedSchema');
 Route::get('/activities', function(){
-    return Ed::getDeveloperActivities( html: true );
+    return view("editor::unauthorized")->with('data',[
+        'url'=>url("docs/activities")
+    ]);
+});
+
+Route::post('/activities', function(Request $req){
+    if( @$req->password!=config("editor.password") ){
+        return view("editor::unauthorized")->with('data',[
+            'url'=>url("/docs/activities"),
+            'salah'=>true
+        ]);
+    }else{
+        return Ed::getDeveloperActivities( html: true );
+    }
 });
 
 Route::get('/activities/{id}', function( Request $req, $id ){

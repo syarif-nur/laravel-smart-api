@@ -12,7 +12,7 @@ class ProjectStartCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'project:start';
+    protected $signature = 'project:start {--migrate : Migrate default migrations}';
 
     /**
      * The console command description.
@@ -26,6 +26,7 @@ class ProjectStartCommand extends Command
      */
     public function handle()
     {
+        $migrate = $this->option('migrate');
         umask(0000);
         $dirs = [
             'app/Cores', 'app/Models/CustomModels',
@@ -35,7 +36,7 @@ class ProjectStartCommand extends Command
         ];
         
         try{
-            foreach( $dirs as $idx => $dir ){
+            foreach( $dirs as $dir ){
                 $dir = base_path( $dir );
                 if( File::exists( $dir ) ) {
                     chmod($dir, 0777);
@@ -45,13 +46,14 @@ class ProjectStartCommand extends Command
                     $this->info("Created Successfully: $dir");
                 }
             }
-
-            $migrationPath = "vendor/starlight93/laravel-smart-api/database/default_migrations";
-            $this->info("Migrating Default Tables... in $migrationPath");            
-            Artisan::call("migrate:refresh",[
-                "--path" => $migrationPath , "--force"=>true
-            ]);
-            $this->info("Default tables are generated successfully"); 
+            if( $migrate ){
+                $migrationPath = "vendor/starlight93/laravel-smart-api/database/default_migrations";
+                $this->info("Migrating Default Tables... in $migrationPath");            
+                Artisan::call("migrate:refresh",[
+                    "--path" => $migrationPath , "--force"=>true
+                ]);
+                $this->info("Default tables are generated successfully"); 
+            }
 
             $this->info("Generating Models from Existing Database...");            
             Artisan::call("project:model");
@@ -66,7 +68,7 @@ class ProjectStartCommand extends Command
             $this->info("Default Env Keys are generated successfully");
 
             Artisan::call('storage:link');
-
+            Artisan::call('jwt:secret');
 
         }catch(\Exception $err){
             $this->error($dir. "-". $err->getMessage());

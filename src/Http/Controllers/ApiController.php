@@ -5,7 +5,6 @@ namespace Starlight93\LaravelSmartApi\Http\Controllers;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\File;
 use Illuminate\support\Facades\Auth;
 use Validator;
@@ -136,7 +135,7 @@ class ApiController extends Controller
     }
     private function serializeMultipartData(){
         foreach( $this->requestData as $key=>$value ){
-            if( is_numeric($value) ){
+            if( is_numeric($value) || app()->request->hasFile($key) ){
                 continue;
             }
             $triedJSON = json_decode( $value, true);
@@ -300,7 +299,7 @@ class ApiController extends Controller
                 }elseif( in_array($typeData,["date","datetime","timestamp"]  )){
                     $fieldValidator = (in_array($payload,$requiredFields)?"required":"nullable").'|date_multi_format:"Y-m-d H:i:s","Y-m-d G:i:s","Y-m-d H:i","Y-m-d G:i","Y-m-d","d/m/Y"' ;
                 }elseif( in_array($typeData,["text","string"]  )){
-                    $fieldValidator = (in_array($payload,$requiredFields)?"required":"nullable").($length?"|max:$length":"")."|string" ;
+                    $fieldValidator = (in_array($payload,$requiredFields)?"required":"nullable").( $this->isMultipart && in_array($payload,$model->fileColumns)?'' : (($length?"|max:$length":"")."|string") );
                 }
                 if($fieldValidator){
                     if( $operation!=='create' ){
@@ -716,13 +715,18 @@ class ApiController extends Controller
                                 "errors"=>$validator->errors(),
                                 "resource"=>$modelName
                             ]));
-                        }                    
-                        $code= Carbon::now()->format('his');
-                        $fileName = sanitizeString($req->$keyName->getClientOriginalName());
-                        Storage::disk('uploads')->putFileAs(
-                            $modelName, $req->$keyName, $code."_".$fileName
-                        );
-                        $finalData[$keyName] = url("/uploads/$modelName/".$code."_".$fileName);
+                        }
+
+                        $fileName = Api::sanitizeString($req->$keyName->getClientOriginalName());
+                        if(!File::exists(storage_path( "app/public/$modelName" ))){
+                            umask(0000);
+                            File::makeDirectory( storage_path( "app/public/$modelName" ), 493, true);
+                        }
+                        $now = Carbon::now()->format('his');
+                        $fixedPath = "$modelName/$now-$keyName-{$fileName}";
+                        $fixedFullPath = storage_path( "app/public/$fixedPath" );
+                        File::put( $fixedFullPath, File::get( $req->$keyName->getRealPath() ) );
+                        $finalData[$keyName] = $fixedPath;
                     }
                 }
             }
@@ -876,7 +880,7 @@ class ApiController extends Controller
             $oldArr = config( 'files_to_remove' );
             foreach( $model->fileColumns as $col ){
                 if( $preparedModel->$col ){
-                    $oldArr[] =  $preparedModel->$col;
+                    $oldArr[] =  $preparedModel->getRawOriginal($col);
                 }
             }
             config([ 'files_to_remove' => $oldArr ]);
@@ -957,6 +961,7 @@ class ApiController extends Controller
         $finalData  = $updateBeforeEvent["data"];
         if($this->isMultipart){
             $req = $this->originalRequest;
+            $oldArrToRemoves = config( 'files_to_remove' );
             foreach( array_keys($req->all()) as $keyName){
                 if($req->hasFile($keyName) && in_array($keyName, array_keys($finalData)) ){
                     $validator = Validator::make($req->all(), [
@@ -969,15 +974,22 @@ class ApiController extends Controller
                             "errors"=>$validator->errors(),
                             "resource"=>$modelName
                         ]));
-                    }                    
-                    $code= Carbon::now()->format('his');
-                    $fileName = sanitizeString($req->$keyName->getClientOriginalName());
-                    Storage::disk('uploads')->putFileAs(
-                        $modelName, $req->$keyName, $code."_".$fileName
-                    );
-                    $finalData[$keyName] = url("/uploads/$modelName/".$code."_".$fileName);
+                    }
+
+                    $fileName = Api::sanitizeString($req->$keyName->getClientOriginalName());
+                    if(!File::exists(storage_path( "app/public/$modelName" ))){
+                        umask(0000);
+                        File::makeDirectory( storage_path( "app/public/$modelName" ), 493, true);
+                    }
+                    $now = Carbon::now()->format('his');
+                    $fixedPath = "$modelName/$now-$keyName-{$fileName}";
+                    $fixedFullPath = storage_path( "app/public/$fixedPath" );
+                    File::put( $fixedFullPath, File::get( $req->$keyName->getRealPath() ) );
+                    $finalData[$keyName] = $fixedPath;
+                    $oldArrToRemoves[] = $preparedModel->getRawOriginal($keyName);
                 }
             }
+            config([ 'files_to_remove' => $oldArrToRemoves ]);
         }
 
         $finalData  = Api::reformatData($finalData,$preparedModel);
